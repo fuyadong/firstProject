@@ -16,7 +16,11 @@
 ################################################################################
 
 import settings
-from flask import Flask
+from werkzeug.wrappers import Response
+from flask.views import View
+from flask import Flask, url_for, request, redirect, render_template, make_response, jsonify
+
+from application import user
 
 
 """
@@ -25,8 +29,8 @@ from flask import Flask
 以便获得静态文件和模板文件的目录。
 Flask类实现了一个wsgi应用
 """
-app = Flask(__name__)
-
+app = Flask(__name__, template_folder='templates')
+app.register_blueprint(user.user_bp)
 
 """
 配置管理
@@ -50,8 +54,91 @@ wesmart就是视图函数;
 
 @app.route('/')
 def wesmart():
-    return "we smart!"
+    return {'message': "we smart!"}
 
+
+# 响应response: (response, status, headers)
+@app.route('/custom_headers')
+def headers():
+    return {'headers': [1, 2, 3]}, 201, [('X-Request-Id', '100')]
+
+
+# 动态URL规则
+@app.route('/article/<iid>')
+def article(iid):
+    return "Item:{}".format(iid)
+
+
+# /article?page_name=1 or /blog?page_name=1
+@app.route('/<any(article, blog):page_name>')
+def item(url_path):
+    print type(url_path), url_path
+    return url_path
+
+
+@app.route('/people/', methods={'POST', 'GET'})
+def people():
+    name = request.args.get('name')
+    if not name:
+        return redirect(url_for('login'))
+    user_agent = request.headers.get('User-Agent')
+    return 'Name: {0}; UA: {1}'.format(name, user_agent)
+
+
+@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        return 'User: {} login'.format(user_id)
+    else:
+        return 'Open Login page'
+
+
+@app.errorhandler(404)
+def not_found(error):
+    resp = make_response(render_template('error.html'), 404)
+    return resp
+
+
+with app.test_request_context():
+    print "use url_for to build url>>>"
+    print url_for('article', iid='1')
+
+
+class JSONResponse(Response):
+    @classmethod
+    def force_type(cls, response, environ=None):
+        if isinstance(response, dict):
+            response = jsonify(response)
+        return super(JSONResponse, cls).force_type(response, environ)
+
+
+class BaseView(View):
+    def get_template_name(self):
+        raise NotImplementedError()
+
+    def render_template(self, context):
+        return render_template(self.get_template_name(), **context)
+
+    def dispatch_request(self):
+        if request.method != 'GET':
+            return 'UNSUPPORTED!'
+
+        context = {'users': self.get_users()}
+        return self.render_template(context)
+
+
+class UserView(BaseView):
+    def get_template_name(self):
+        return 'users.html'
+
+    def get_users(self):
+        return [{
+            'username': 'fake',
+            'avatar': 'http://lorempixel.com/100/100/nature/'
+        }]
+
+app.add_url_rule('/users', view_func=UserView.as_view('userview'))
 
 """
 if 语句可以保证当其他文件引用此文件时不会执行这个判断内的代码;
@@ -65,6 +152,8 @@ if __name__ == '__main__':
     不能用于生产环境中
     """
     app.debug = app.config.get('DEBUG', False)  # 开启调试模式
+
+    app.response_class = JSONResponse
 
     """
     app.run启动服务;

@@ -1,0 +1,20 @@
+digraph ObjectGraph {
+  node[shape=box, style=filled, fillcolor=white];
+  o4494870576[fontcolor=red];
+  o4494870576[label="list\n3 items"];
+  o4494870576[fillcolor="0,0,1"];
+  o4494870576 -> o4495173064;
+  o4494870576 -> o4494870648;
+  o4494870576 -> o4494770904;
+  o4495173064[label="dict\n1 items"];
+  o4495173064[fillcolor="0,0,0.766667"];
+  o4495173064 -> o4490169920;
+  o4495173064 -> o4494770904 [label="x",weight=2];
+  o4494870648[label="list\n1 items"];
+  o4494870648[fillcolor="0,0,0.766667"];
+  o4494870648 -> o4494770904;
+  o4494770904[label="list\n0 items"];
+  o4494770904[fillcolor="0,0,0.766667"];
+  o4490169920[label="str\n'x'"];
+  o4490169920[fillcolor="0,0,0.533333"];
+}
